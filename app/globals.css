@@ -3,25 +3,51 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #1a1a1a;
+  --foreground: #ffffff;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #1a1a1a; }
+::-webkit-scrollbar-thumb { background: #333333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #444444; }
+
+@layer components {
+  .btn-primary {
+    @apply bg-gold-400 hover:bg-gold-500 text-charcoal-900 font-semibold px-5 py-2.5 rounded-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-surface-light hover:bg-charcoal-600 text-white font-medium px-5 py-2.5 rounded-lg border border-surface-border transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-danger {
+    @apply bg-red-700 hover:bg-red-600 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors duration-150;
+  }
+  .card {
+    @apply bg-surface border border-surface-border rounded-xl p-5;
+  }
+  .input {
+    @apply bg-charcoal-700 border border-surface-border text-white rounded-lg px-4 py-2.5 w-full focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent placeholder-gray-500;
+  }
+  .label {
+    @apply block text-sm font-medium text-gray-300 mb-1.5;
+  }
+  .badge-excellent { @apply bg-green-900 text-green-300 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+  .badge-good { @apply bg-blue-900 text-blue-300 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+  .badge-fair { @apply bg-yellow-900 text-yellow-300 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+  .badge-poor { @apply bg-orange-900 text-orange-300 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+  .badge-damaged { @apply bg-red-900 text-red-300 text-xs font-medium px-2.5 py-0.5 rounded-full; }
+  .badge-minor { @apply bg-yellow-900 text-yellow-300 text-xs font-medium px-2 py-0.5 rounded-full; }
+  .badge-moderate { @apply bg-orange-900 text-orange-300 text-xs font-medium px-2 py-0.5 rounded-full; }
+  .badge-major { @apply bg-red-900 text-red-300 text-xs font-medium px-2 py-0.5 rounded-full; }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+  .text-balance { text-wrap: balance; }
 }

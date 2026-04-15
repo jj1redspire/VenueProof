@@ -9,8 +9,25 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        charcoal: {
+          900: '#0f0f0f',
+          800: '#1a1a1a',
+          700: '#242424',
+          600: '#2e2e2e',
+        },
+        gold: {
+          400: '#D4AF37',
+          500: '#C4A030',
+          600: '#A8892A',
+        },
+        surface: {
+          DEFAULT: '#1e1e1e',
+          light: '#262626',
+          border: '#333333',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
       },
     },
   },
