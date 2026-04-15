@@ -26,6 +26,7 @@ export interface VPZone {
 }
 
 export type EventStatus = 'pending' | 'pre_complete' | 'post_complete' | 'compared' | 'exported'
+export type CateringType = 'delivery' | 'full_service' | 'drop_off' | null
 
 export interface VPEvent {
   id: string
@@ -38,7 +39,24 @@ export interface VPEvent {
   deposit_amount: number
   status: EventStatus
   client_signature: string | null
+  catering_type: CateringType
   created_at: string
+}
+
+export interface EquipmentItem {
+  name: string
+  count: number
+  condition: 'good' | 'fair' | 'damaged'
+  notes: string
+}
+
+export interface TempReading {
+  item: string
+  temperature: number
+  reading_type: 'hot' | 'cold'
+  timestamp: string
+  compliant: boolean
+  notes: string
 }
 
 export type SnapshotType = 'pre' | 'post'
@@ -52,6 +70,8 @@ export interface VPConditionSnapshot {
   voice_transcript: string | null
   ai_structured_data: Record<string, unknown> | null
   condition_rating: 'excellent' | 'good' | 'fair' | 'poor' | 'damaged' | null
+  equipment_inventory: EquipmentItem[] | null
+  temperature_logs: TempReading[] | null
   created_at: string
 }
 

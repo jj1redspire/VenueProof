@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
-import { VENUE_ZONES } from '@/lib/zones'
+import { getZonesForBusinessType } from '@/lib/zones'
 
 export default function NewLocationPage() {
   const router = useRouter()
@@ -30,8 +30,9 @@ export default function NewLocationPage() {
 
     if (locErr || !loc) { setError(locErr?.message ?? 'Failed to create location'); setLoading(false); return }
 
-    // Seed zones from template
-    const zoneRows = VENUE_ZONES.map(z => ({
+    // Seed zones from template (catering gets catering zones, venues get venue zones)
+    const zones = getZonesForBusinessType(form.business_type)
+    const zoneRows = zones.map(z => ({
       location_id: loc.id,
       name: z.name,
       category: z.category,
@@ -49,8 +50,8 @@ export default function NewLocationPage() {
         <Link href="/dashboard/locations" className="text-gray-400 hover:text-white flex items-center gap-1.5 text-sm mb-4">
           <ArrowLeft className="w-4 h-4" /> Back to Locations
         </Link>
-        <h1 className="text-2xl font-bold text-white">Add Venue Location</h1>
-        <p className="text-gray-400 text-sm mt-1">10 inspection zones will be automatically set up for your venue</p>
+        <h1 className="text-2xl font-bold text-white">Add Location</h1>
+        <p className="text-gray-400 text-sm mt-1">Inspection zones will be automatically configured for your business type</p>
       </div>
 
       {error && <div className="bg-red-900/50 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm">{error}</div>}
@@ -67,19 +68,29 @@ export default function NewLocationPage() {
         <div>
           <label className="label">Venue Type</label>
           <select className="input" value={form.business_type} onChange={e => setForm(f => ({ ...f, business_type: e.target.value }))}>
-            <option value="event_venue">Event Venue / Banquet Hall</option>
-            <option value="wedding_venue">Wedding Venue</option>
-            <option value="hotel_ballroom">Hotel Ballroom</option>
-            <option value="rooftop">Rooftop Venue</option>
-            <option value="winery_barn">Winery / Barn</option>
-            <option value="restaurant_private">Restaurant Private Events</option>
+            <optgroup label="Venue / Venue Manager">
+              <option value="event_venue">Event Venue / Banquet Hall</option>
+              <option value="wedding_venue">Wedding Venue</option>
+              <option value="hotel_ballroom">Hotel Ballroom</option>
+              <option value="rooftop">Rooftop Venue</option>
+              <option value="winery_barn">Winery / Barn</option>
+              <option value="restaurant_private">Restaurant Private Events</option>
+            </optgroup>
+            <optgroup label="Caterer / Event Services">
+              <option value="catering_company">Catering Company</option>
+              <option value="event_catering">Event Rental + Catering</option>
+            </optgroup>
             <option value="other">Other</option>
           </select>
         </div>
         <div className="bg-charcoal-700 rounded-lg p-3">
-          <p className="text-xs text-gray-400 font-medium mb-2">Auto-configured inspection zones:</p>
+          <p className="text-xs text-gray-400 font-medium mb-2">
+            Auto-configured zones for{' '}
+            {form.business_type === 'catering_company' || form.business_type === 'event_catering'
+              ? 'catering' : 'venue'}:
+          </p>
           <div className="flex flex-wrap gap-1.5">
-            {VENUE_ZONES.map(z => (
+            {getZonesForBusinessType(form.business_type).map(z => (
               <span key={z.name} className="bg-charcoal-600 text-gray-300 text-xs px-2 py-0.5 rounded">{z.name.split(' /')[0]}</span>
             ))}
           </div>

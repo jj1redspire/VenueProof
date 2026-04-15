@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
-import type { VPZone, VPConditionSnapshot } from '@/types'
+import type { VPZone, VPConditionSnapshot, EquipmentItem, TempReading } from '@/types'
 
 type ConditionRating = 'excellent' | 'good' | 'fair' | 'poor' | 'damaged'
 
@@ -42,6 +42,12 @@ export default function WalkthroughPage() {
   const [notes, setNotes] = useState('')
   const [showCheckpoints, setShowCheckpoints] = useState(true)
 
+  // Catering-specific state
+  const [isCateringEvent, setIsCateringEvent] = useState(false)
+  const [equipmentInventory, setEquipmentInventory] = useState<EquipmentItem[]>([])
+  const [temperatureLogs, setTemperatureLogs] = useState<TempReading[]>([])
+  const [showCateringPanel, setShowCateringPanel] = useState(true)
+
   // Voice recording (Web Speech API)
   const [recording, setRecording] = useState(false)
   const [transcribing] = useState(false)
@@ -55,8 +61,9 @@ export default function WalkthroughPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/auth/login'); return }
 
-      const { data: evt } = await supabase.from('vp_events').select('location_id').eq('id', eventId).single()
+      const { data: evt } = await supabase.from('vp_events').select('location_id, catering_type').eq('id', eventId).single()
       if (!evt) { router.push('/dashboard'); return }
+      setIsCateringEvent(!!evt.catering_type)
 
       const [{ data: zs }, { data: snaps }] = await Promise.all([
         supabase.from('vp_zones').select('*').eq('location_id', evt.location_id).order('sort_order'),
@@ -85,6 +92,9 @@ export default function WalkthroughPage() {
     setConditionRating('good')
     setNotes('')
     setShowCheckpoints(true)
+    setEquipmentInventory([])
+    setTemperatureLogs([])
+    setShowCateringPanel(true)
   }, [currentZoneIdx])
 
   function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -188,6 +198,8 @@ export default function WalkthroughPage() {
       voice_transcript: transcript || null,
       ai_structured_data: aiResult,
       condition_rating: conditionRating,
+      equipment_inventory: equipmentInventory.length > 0 ? equipmentInventory : null,
+      temperature_logs: temperatureLogs.length > 0 ? temperatureLogs : null,
     }
 
     if (existing) {
@@ -448,6 +460,180 @@ export default function WalkthroughPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Catering panel — equipment inventory + temperature logs */}
+          {isCateringEvent && zone.category.startsWith('catering') && (
+            <div className="card border-gold-400/20">
+              <button
+                onClick={() => setShowCateringPanel(v => !v)}
+                className="flex items-center justify-between w-full text-sm font-semibold text-white mb-0"
+              >
+                <span className="flex items-center gap-2">
+                  <Star className="w-4 h-4 text-gold-400" />
+                  Catering Documentation
+                  {(equipmentInventory.length > 0 || temperatureLogs.length > 0) && (
+                    <span className="text-xs bg-gold-400/20 text-gold-400 px-2 py-0.5 rounded-full">
+                      {equipmentInventory.length + temperatureLogs.length} entries
+                    </span>
+                  )}
+                </span>
+                {showCateringPanel ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+
+              {showCateringPanel && (
+                <div className="mt-4 space-y-5">
+                  {/* Equipment Inventory */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
+                      Equipment Inventory
+                    </p>
+                    <p className="text-xs text-gray-500 mb-3">Log items being delivered/present — used for return comparison</p>
+                    <div className="space-y-2">
+                      {equipmentInventory.map((item, i) => (
+                        <div key={i} className="flex gap-2 items-start">
+                          <input
+                            type="text"
+                            className="input text-sm flex-1"
+                            placeholder="Item name (e.g. Wine glasses)"
+                            value={item.name}
+                            onChange={e => setEquipmentInventory(prev => {
+                              const next = [...prev]
+                              next[i] = { ...next[i], name: e.target.value }
+                              return next
+                            })}
+                          />
+                          <input
+                            type="number"
+                            className="input text-sm w-16"
+                            placeholder="Qty"
+                            min="0"
+                            value={item.count}
+                            onChange={e => setEquipmentInventory(prev => {
+                              const next = [...prev]
+                              next[i] = { ...next[i], count: Number(e.target.value) }
+                              return next
+                            })}
+                          />
+                          <select
+                            className="input text-sm w-24"
+                            value={item.condition}
+                            onChange={e => setEquipmentInventory(prev => {
+                              const next = [...prev]
+                              next[i] = { ...next[i], condition: e.target.value as EquipmentItem['condition'] }
+                              return next
+                            })}
+                          >
+                            <option value="good">Good</option>
+                            <option value="fair">Fair</option>
+                            <option value="damaged">Damaged</option>
+                          </select>
+                          <button
+                            onClick={() => setEquipmentInventory(prev => prev.filter((_, j) => j !== i))}
+                            className="text-gray-500 hover:text-red-400 flex-shrink-0 mt-2.5"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setEquipmentInventory(prev => [...prev, { name: '', count: 1, condition: 'good', notes: '' }])}
+                      className="btn-secondary text-xs mt-2 flex items-center gap-1.5"
+                    >
+                      + Add Equipment Item
+                    </button>
+                  </div>
+
+                  {/* Temperature Logs */}
+                  {(zone.category === 'catering_service' || zone.category === 'catering_kitchen') && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
+                        Temperature Log
+                        <span className="text-gray-500 font-normal ml-2">Cold ≤41°F · Hot ≥135°F</span>
+                      </p>
+                      <p className="text-xs text-gray-500 mb-3">FDA Food Code compliance — log temps at setup</p>
+                      <div className="space-y-2">
+                        {temperatureLogs.map((log, i) => {
+                          const compliant = log.reading_type === 'cold' ? log.temperature <= 41 : log.temperature >= 135
+                          return (
+                            <div key={i} className={`flex gap-2 items-start rounded-lg p-2 ${compliant ? 'bg-green-900/20' : 'bg-red-900/20'}`}>
+                              <input
+                                type="text"
+                                className="input text-sm flex-1"
+                                placeholder="Food item (e.g. Caesar salad)"
+                                value={log.item}
+                                onChange={e => setTemperatureLogs(prev => {
+                                  const next = [...prev]
+                                  next[i] = { ...next[i], item: e.target.value }
+                                  return next
+                                })}
+                              />
+                              <div className="flex gap-1 items-center flex-shrink-0">
+                                <input
+                                  type="number"
+                                  className={`input text-sm w-20 ${!compliant && log.temperature !== 0 ? 'border-red-500' : ''}`}
+                                  placeholder="°F"
+                                  value={log.temperature || ''}
+                                  onChange={e => {
+                                    const temp = Number(e.target.value)
+                                    const isCompliant = log.reading_type === 'cold' ? temp <= 41 : temp >= 135
+                                    setTemperatureLogs(prev => {
+                                      const next = [...prev]
+                                      next[i] = { ...next[i], temperature: temp, compliant: isCompliant, timestamp: new Date().toISOString() }
+                                      return next
+                                    })
+                                  }}
+                                />
+                                <span className="text-gray-500 text-xs">°F</span>
+                              </div>
+                              <select
+                                className="input text-sm w-20"
+                                value={log.reading_type}
+                                onChange={e => setTemperatureLogs(prev => {
+                                  const next = [...prev]
+                                  const type = e.target.value as TempReading['reading_type']
+                                  const isCompliant = type === 'cold' ? next[i].temperature <= 41 : next[i].temperature >= 135
+                                  next[i] = { ...next[i], reading_type: type, compliant: isCompliant }
+                                  return next
+                                })}
+                              >
+                                <option value="cold">Cold</option>
+                                <option value="hot">Hot</option>
+                              </select>
+                              <span className={`text-xs font-semibold flex-shrink-0 mt-2.5 ${compliant && log.temperature !== 0 ? 'text-green-400' : log.temperature !== 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                                {log.temperature !== 0 ? (compliant ? '✓' : '✗') : '--'}
+                              </span>
+                              <button
+                                onClick={() => setTemperatureLogs(prev => prev.filter((_, j) => j !== i))}
+                                className="text-gray-500 hover:text-red-400 flex-shrink-0 mt-2.5"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <button
+                        onClick={() => setTemperatureLogs(prev => [...prev, { item: '', temperature: 0, reading_type: 'cold', timestamp: new Date().toISOString(), compliant: false, notes: '' }])}
+                        className="btn-secondary text-xs mt-2 flex items-center gap-1.5"
+                      >
+                        + Add Temperature Reading
+                      </button>
+
+                      {/* Compliance summary */}
+                      {temperatureLogs.length > 0 && (
+                        <div className={`mt-2 text-xs px-3 py-2 rounded-lg ${temperatureLogs.every(t => t.compliant || t.temperature === 0) ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'}`}>
+                          {temperatureLogs.filter(t => !t.compliant && t.temperature !== 0).length === 0
+                            ? `✓ All ${temperatureLogs.filter(t => t.temperature !== 0).length} readings compliant`
+                            : `✗ ${temperatureLogs.filter(t => !t.compliant && t.temperature !== 0).length} out-of-range reading${temperatureLogs.filter(t => !t.compliant && t.temperature !== 0).length > 1 ? 's' : ''} — document corrective action in notes`}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

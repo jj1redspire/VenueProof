@@ -36,15 +36,35 @@ export interface ComparisonResult {
   comparison_notes: string
 }
 
+export interface CateringContext {
+  isCateringZone: boolean
+  zoneCategory?: string
+  temperatureLogs?: Array<{ item: string; temperature: number; reading_type: 'hot' | 'cold'; compliant: boolean }>
+}
+
 export async function structureSnapshot(
   zoneName: string,
   checkpoints: string[],
-  voiceTranscript: string
+  voiceTranscript: string,
+  cateringCtx?: CateringContext
 ): Promise<StructuredSnapshot> {
-  const prompt = `You are a professional venue inspector analyzing a facility condition walkthrough report.
+  const cateringAddendum = cateringCtx?.isCateringZone ? `
+
+CATERING CONTEXT — this is a catering delivery/setup zone, not a standard venue zone.
+Zone category: ${cateringCtx.zoneCategory ?? 'catering'}
+${cateringCtx.temperatureLogs && cateringCtx.temperatureLogs.length > 0
+  ? `Temperature readings captured:
+${cateringCtx.temperatureLogs.map(t => `  - ${t.item}: ${t.temperature}°F (${t.reading_type}) — ${t.compliant ? '✓ COMPLIANT' : '✗ OUT OF RANGE'}`).join('\n')}
+
+FDA Food Code: cold foods must be ≤41°F, hot foods must be ≥135°F. Note any non-compliant readings prominently.`
+  : ''}
+
+Focus on: delivery path damage, floor/wall scuffs, equipment condition, setup quality, food safety compliance.` : ''
+
+  const prompt = `You are a professional ${cateringCtx?.isCateringZone ? 'catering operations' : 'venue'} inspector analyzing a facility condition walkthrough report.
 
 Zone: ${zoneName}
-Checkpoints to evaluate: ${checkpoints.join(', ')}
+Checkpoints to evaluate: ${checkpoints.join(', ')}${cateringAddendum}
 
 Voice transcript from inspector:
 "${voiceTranscript}"
@@ -75,6 +95,79 @@ Respond ONLY with valid JSON in this exact format:
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error('No JSON found in Claude response')
   return JSON.parse(jsonMatch[0]) as StructuredSnapshot
+}
+
+export interface InventoryDiscrepancy {
+  item: string
+  delivered_count: number
+  returned_count: number
+  difference: number
+  condition_change: string
+  deduction_suggestion: number
+}
+
+export interface InventoryComparisonResult {
+  discrepancies: InventoryDiscrepancy[]
+  total_deduction_suggestion: number
+  summary: string
+}
+
+export async function compareCateringInventory(
+  zoneName: string,
+  deliveredInventory: Array<{ name: string; count: number; condition: string; notes: string }>,
+  returnedInventory: Array<{ name: string; count: number; condition: string; notes: string }>
+): Promise<InventoryComparisonResult> {
+  const prompt = `You are a professional catering equipment auditor comparing delivery inventory vs return inventory.
+
+Zone: ${zoneName}
+
+DELIVERED INVENTORY:
+${JSON.stringify(deliveredInventory, null, 2)}
+
+RETURNED INVENTORY:
+${JSON.stringify(returnedInventory, null, 2)}
+
+Compare the inventories and identify:
+1. Count discrepancies (items delivered but not returned, or fewer returned)
+2. Condition changes (items in worse condition at return)
+3. Suggest replacement/repair costs per item based on typical catering equipment costs:
+   - Wine glass: $8-15 each
+   - Champagne flute: $10-18 each
+   - Dinner plate: $12-25 each
+   - Chafing dish: $40-120 each
+   - Linen (stained/damaged): $15-40 each
+   - Serving platter: $20-60 each
+
+Respond ONLY with valid JSON:
+{
+  "discrepancies": [
+    {
+      "item": "item name",
+      "delivered_count": 12,
+      "returned_count": 10,
+      "difference": -2,
+      "condition_change": "2 wine glasses missing, 1 cracked",
+      "deduction_suggestion": 30
+    }
+  ],
+  "total_deduction_suggestion": 0,
+  "summary": "2-3 sentence summary of inventory comparison findings"
+}`
+
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1024,
+    messages: [{ role: 'user', content: prompt }],
+  })
+
+  const text = message.content[0].type === 'text' ? message.content[0].text : ''
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('No JSON found in Claude inventory comparison response')
+  const result = JSON.parse(jsonMatch[0]) as InventoryComparisonResult
+  result.total_deduction_suggestion = result.discrepancies.reduce(
+    (sum, d) => sum + (d.deduction_suggestion || 0), 0
+  )
+  return result
 }
 
 export async function compareSnapshots(

@@ -22,6 +22,7 @@ export default function NewEventPage() {
     event_date: '',
     guest_count: '',
     deposit_amount: '',
+    catering_type: '',
   })
 
   useEffect(() => {
@@ -66,6 +67,7 @@ export default function NewEventPage() {
         guest_count: form.guest_count ? Number(form.guest_count) : null,
         deposit_amount: Number(form.deposit_amount),
         status: 'pending',
+        catering_type: form.catering_type || null,
       })
       .select()
       .single()
@@ -205,8 +207,26 @@ export default function NewEventPage() {
             onChange={e => setForm(f => ({ ...f, deposit_amount: e.target.value }))}
             required
           />
-          <p className="text-gray-500 text-xs mt-1">The security deposit amount at stake for this event</p>
+          <p className="text-gray-500 text-xs mt-1">The security deposit or equipment value at stake for this event</p>
         </div>
+
+        {/* Catering type — shown when location is a catering business */}
+        {(() => {
+          const loc = locations.find(l => l.id === form.location_id)
+          const isCatering = loc?.business_type === 'catering_company' || loc?.business_type === 'event_catering'
+          return isCatering ? (
+            <div>
+              <label className="label">Service Type</label>
+              <select className="input" value={form.catering_type} onChange={e => setForm(f => ({ ...f, catering_type: e.target.value }))}>
+                <option value="">Select service type...</option>
+                <option value="full_service">Full Service (deliver, set up, serve, clean up)</option>
+                <option value="delivery">Delivery & Setup Only</option>
+                <option value="drop_off">Drop-Off Only</option>
+              </select>
+              <p className="text-gray-500 text-xs mt-1">Determines which documentation steps apply to this event</p>
+            </div>
+          ) : null
+        })()}
 
         <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}

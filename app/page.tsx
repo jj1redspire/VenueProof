@@ -303,6 +303,33 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Catering vertical card */}
+      <section className="bg-charcoal-800 border-t border-surface-border py-12">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <h2 className="text-lg font-semibold text-gray-400 text-center mb-6">Also available for</h2>
+          <div className="max-w-xl mx-auto">
+            <div className="card border-gold-400/20 flex flex-col sm:flex-row items-center gap-5">
+              <div className="text-4xl flex-shrink-0">🍽️</div>
+              <div className="flex-1 text-center sm:text-left">
+                <p className="font-bold text-white text-lg">Caterers</p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Document your delivery path, equipment inventory, food temps, and setup completion.
+                  Protect against venue damage claims. Prove you were on time and food-safe.
+                </p>
+                <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
+                  {['Delivery path photos', 'Equipment inventory', 'Food temp compliance', 'Setup timestamp'].map(f => (
+                    <span key={f} className="text-xs bg-charcoal-700 text-gray-300 px-2.5 py-1 rounded-full">{f}</span>
+                  ))}
+                </div>
+              </div>
+              <Link href="/catering" className="btn-primary text-sm flex-shrink-0 whitespace-nowrap">
+                Learn More →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-charcoal-900 border-t border-surface-border py-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -312,6 +339,7 @@ export default function LandingPage() {
               <span className="font-bold text-white">VenueProof</span>
             </div>
             <div className="flex gap-6 text-sm text-gray-500">
+              <Link href="/catering" className="hover:text-white">For Caterers</Link>
               <Link href="/auth/login" className="hover:text-white">Log in</Link>
               <Link href="/auth/signup" className="hover:text-white">Sign up</Link>
             </div>
