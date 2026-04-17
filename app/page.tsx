@@ -342,6 +342,8 @@ export default function LandingPage() {
               <Link href="/catering" className="hover:text-white">For Caterers</Link>
               <Link href="/auth/login" className="hover:text-white">Log in</Link>
               <Link href="/auth/signup" className="hover:text-white">Sign up</Link>
+              <Link href="/terms" className="hover:text-white">Terms</Link>
+              <Link href="/privacy" className="hover:text-white">Privacy</Link>
             </div>
             <p className="text-gray-600 text-sm">© 2026 VenueProof. All rights reserved.</p>
           </div>
